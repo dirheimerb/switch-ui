@@ -1,0 +1,282 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model users {
+  id                    String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email                 String
+  password_hash         String
+  locked_at             DateTime? @db.Timestamptz(6)
+  failed_login_attempts Int       @default(0)
+  access_token          String?
+  confirmation_token    String?
+  is_confirmed          Boolean   @default(false)
+  first_name            String    @default("")
+  last_name             String    @default("")
+  phone                 String    @default("")
+  photo_url             String?
+  account               account[]
+  tasks                 tasks[]
+}
+
+model account {
+  id                String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?        @db.Text
+  access_token      String?        @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?        @db.Text
+  session_state     String?
+  created_at        DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime       @default(now()) @db.Timestamptz(6)
+  name              String         @default("")
+  user_id           String?        @db.Uuid
+  users             users?         @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_id")
+  billing_info      billing_info[]
+  contact           contact[]
+  docs              docs[]
+  photos            photos[]
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([user_id], map: "fki_user_id")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      account[]
+  sessions      Session[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model address {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+  street      String   @default("")
+  city        String   @default("")
+  postal_code String   @default("")
+  state       String   @default("")
+  country     String   @default("")
+
+  @@index([created_at], map: "address_created_at_index")
+}
+
+model billing_info {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+  card_number String
+  cvv         String
+  exp_date    String
+  account_id  String   @db.Uuid
+  account     account  @relation(fields: [account_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "billing_info_ref_account_id")
+
+  @@index([account_id], map: "billing_info_account_id_index")
+  @@index([created_at], map: "billing_info_created_at_index")
+}
+
+model calendar {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  user_id    String   @db.Uuid
+  name       String   @default("")
+  color      String?
+}
+
+model contact {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+  name         String   @default("")
+  phone        String   @default("")
+  description  String   @default("")
+  account_id   String   @db.Uuid
+  street       String?
+  state        String?
+  city         String?
+  postal_code  String?
+  country      String?
+  contact_type String   @default("")
+  account      account  @relation(fields: [account_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "contact_ref_account_id")
+
+  @@index([account_id], map: "contact_account_id_index")
+  @@index([created_at], map: "contact_created_at_index")
+}
+
+model docs {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  name       String   @default("")
+  url        String   @default("")
+  account_id String   @db.Uuid
+  account    account  @relation(fields: [account_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "docs_ref_account_id")
+
+  @@index([account_id], map: "docs_account_id_index")
+  @@index([created_at], map: "docs_created_at_index")
+}
+
+model family_member {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model location {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  street      String   @default("")
+  state       String   @default("")
+  postal_code String
+  city        String   @default("")
+  country     String   @default("")
+  geo_long    Float?   @db.Real
+  geo_lat     Float?   @db.Real
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([created_at], map: "location_created_at_index")
+}
+
+model photos {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  name       String   @default("")
+  url        String   @default("")
+  account_id String   @db.Uuid
+  account    account  @relation(fields: [account_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "photos_ref_account_id")
+
+  @@index([account_id], map: "photos_account_id_index")
+  @@index([created_at], map: "photos_created_at_index")
+}
+
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
+}
+
+model subcriptions {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  account_id String   @db.Uuid
+  name       String
+  price      String
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model tasks {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+  user_id      String   @db.Uuid
+  text         String   @default("")
+  is_completed Boolean  @default(false)
+  users        users    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tasks_ref_user_id")
+
+  @@index([created_at], map: "tasks_created_at_index")
+  @@index([user_id], map: "tasks_user_id_index")
+}
+
+model us_gaz {
+  id        Int     @id(map: "pk_us_gaz") @default(autoincrement())
+  seq       Int?
+  word      String?
+  stdword   String?
+  token     Int?
+  is_custom Boolean @default(true)
+}
+
+model us_lex {
+  id        Int     @id(map: "pk_us_lex") @default(autoincrement())
+  seq       Int?
+  word      String?
+  stdword   String?
+  token     Int?
+  is_custom Boolean @default(true)
+}
+
+model us_rules {
+  id        Int     @id(map: "pk_us_rules") @default(autoincrement())
+  rule      String?
+  is_custom Boolean @default(true)
+}
+
+enum contacttype {
+  personal
+  medical
+  child_care
+  school
+  grandparents
+  misc
+}
+
+enum familyrole {
+  parent
+  child
+  other
+}
+
+enum months {
+  january
+  february
+  march
+  april
+  may
+  june
+  july
+  august
+  september
+  october
+  november
+  december
+}
+
+enum usertype {
+  standard
+  admin
+}
+
+enum weekdays {
+  sunday
+  monday
+  tuesday
+  wednesday
+  thursday
+  friday
+  saturday
+}
